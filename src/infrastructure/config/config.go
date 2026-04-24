@@ -37,12 +37,12 @@ type MinioConfig struct {
 // LoadConfig carga configuración desde .env o variables del sistema.
 // Hace panic si faltan variables críticas.
 func LoadConfig() *Config {
-	_ = godotenv.Load()
+	_ = godotenv.Load("../.env")
 
 	return &Config{
 		Server: ServerConfig{
 			Host: getEnvOrDefault("SERVER_HOST", "localhost"),
-			Port: mustEnv("SERVER_PORT"),
+			Port: getEnvOrDefault("SERVER_PORT", "10021"),
 		},
 		Database: DBConfig{
 			DBUser:     mustEnv("DB_USER"),
@@ -56,7 +56,7 @@ func LoadConfig() *Config {
 			User:     mustEnv("MINIO_USER"),
 			Password: mustEnv("MINIO_PWD"),
 			Bucket:   mustEnv("MINIO_BUCKET"),
-			SSL:      getEnvOrDefault("MINIO_SSL", "false") == "true",
+			SSL:      getEnvOrDefault("	", "false") == "true",
 		},
 	}
 }

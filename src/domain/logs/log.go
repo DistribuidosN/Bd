@@ -4,9 +4,9 @@ import "time"
 
 type ProcessingLog struct {
 	ID        int       `json:"id"`
-	NodeID    int       `json:"node_id"`
-	ImageUUID string    `json:"image_uuid"`
+	NodeID    string    `json:"node_id"`
+	ImageUUID *string   `json:"image_uuid,omitempty"`
 	Level     string    `json:"level"`
 	Message   string    `json:"message"`
-	LogTime   time.Time `json:"log_time"`
+	LogTime   *time.Time `json:"log_time" json:"logTime"`
 }

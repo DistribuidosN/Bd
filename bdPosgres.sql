@@ -122,17 +122,21 @@ COMMENT ON COLUMN images.status_id IS 'FK a image_statuses';
 COMMENT ON COLUMN images.node_id IS 'Nodo asignado para el trabajo';
 COMMENT ON COLUMN images.conversion_time IS 'Fecha/hora de finalización';
 
-CREATE TABLE image_transformations (
+CREATE TABLE batch_transformations (
     id SERIAL PRIMARY KEY,
-    image_uuid CHAR(36) NOT NULL,
+    batch_uuid CHAR(36) NOT NULL,
     type_id INT NOT NULL,
-    params JSONB,
-    FOREIGN KEY (image_uuid) REFERENCES images(image_uuid),
+    params JSONB NOT NULL DEFAULT '{}',
+    execution_order INT NOT NULL,
+    FOREIGN KEY (batch_uuid) REFERENCES batches(batch_uuid),
     FOREIGN KEY (type_id) REFERENCES transformation_types(id)
 );
-COMMENT ON TABLE image_transformations IS 'Pipeline de transformaciones requeridas por imagen';
-COMMENT ON COLUMN image_transformations.type_id IS 'FK a transformation_types';
-COMMENT ON COLUMN image_transformations.params IS 'Parámetros técnicos en JSONB';
+COMMENT ON TABLE batch_transformations IS 'Define el pipeline de transformaciones a aplicar a todas las imágenes de un batch';
+COMMENT ON COLUMN batch_transformations.id IS 'Identificador único del registro de transformación dentro del batch';
+COMMENT ON COLUMN batch_transformations.batch_uuid IS 'FK al lote que contiene las imágenes a procesar';
+COMMENT ON COLUMN batch_transformations.type_id IS 'FK al tipo de transformación a aplicar (ej. resize, grayscale)';
+COMMENT ON COLUMN batch_transformations.params IS 'Parámetros específicos de la transformación en formato JSONB (ej. dimensiones, calidad)';
+COMMENT ON COLUMN batch_transformations.execution_order IS 'Orden de ejecución dentro del pipeline de transformaciones del batch';
 
 CREATE TABLE processing_logs (
     id SERIAL PRIMARY KEY,
@@ -155,7 +159,7 @@ COMMENT ON COLUMN processing_logs.level_id IS 'FK a log_levels';
 CREATE TABLE node_metrics (
     id BIGSERIAL PRIMARY KEY,
     node_id INT NOT NULL,
-    image_uuid CHAR(36) NOT NULL,
+    image_uuid CHAR(36),
     ram_used_mb DECIMAL(10,2) NOT NULL,
     ram_total_mb DECIMAL(10,2) NOT NULL,
     cpu_percent DECIMAL(5,2) NOT NULL,
@@ -192,3 +196,58 @@ COMMENT ON COLUMN node_metrics.p95_latency_ms IS 'Percentil 95 de latencia en ms
 COMMENT ON COLUMN node_metrics.uptime_seconds IS 'Tiempo de actividad del nodo en segundos';
 COMMENT ON COLUMN node_metrics.status_id IS 'FK a node_status (IDLE, BUSY, STEALING, ERROR)';
 COMMENT ON COLUMN node_metrics.reported_at IS 'Timestamp exacto en que se generó la métrica';
+
+-- ==========================================================
+-- 4. DATOS INICIALES (SEEDS)
+-- ==========================================================
+
+-- Estados de Nodos
+INSERT INTO node_status (id, name, description) VALUES
+(1, 'ACTIVE', 'Nodo encendido y registrado en el orquestador'),
+(2, 'INACTIVE', 'Nodo apagado, desconectado o con timeout'),
+(3, 'IDLE', 'Nodo activo pero sin carga de trabajo en la cola'),
+(4, 'BUSY', 'Nodo procesando imágenes activamente (workers ocupados)'),
+(5, 'STEALING', 'Nodo sin trabajo que está robando tareas de otros nodos'),
+(6, 'ERROR', 'Nodo en estado de error crítico o fallo de red')
+ON CONFLICT (name) DO NOTHING;
+
+-- Estados de Lotes (Batches)
+INSERT INTO batch_status (id, name, description) VALUES
+(1, 'PENDING', 'Lote recibido y validado, esperando asignación a nodos'),
+(2, 'PROCESSING', 'Imágenes del lote en proceso de transformación'),
+(3, 'COMPLETED', 'Todas las imágenes del lote procesadas y guardadas exitosamente'),
+(4, 'FAILED', 'El lote falló por completo o superó el límite de errores')
+ON CONFLICT (name) DO NOTHING;
+
+-- Estados de Imágenes
+INSERT INTO image_status (id, name, description) VALUES
+(1, 'RECEIVED', 'Imagen en bruto guardada y lista para encolar'),
+(2, 'PROCESSING', 'Imagen asignada a un worker y en transformación'),
+(3, 'CONVERTED', 'Transformación exitosa, binario final guardado en MinIO'),
+(4, 'FAILED', 'Error de procesamiento, formato inválido o crash del worker')
+ON CONFLICT (name) DO NOTHING;
+
+-- Niveles de Log
+INSERT INTO log_levels (id, name, description) VALUES
+(1, 'INFO', 'Información general y progreso de ejecución normal'),
+(2, 'WARNING', 'Comportamiento inesperado pero el sistema pudo recuperarse'),
+(3, 'ERROR', 'Fallo en una tarea, excepción controlada en un worker'),
+(4, 'FATAL', 'Caída crítica del nodo o pérdida de conexión con la base de datos')
+ON CONFLICT (name) DO NOTHING;
+
+-- Tipos de Transformación
+INSERT INTO transformation_types (id, name, price, description) VALUES
+(1, 'resize', 0.50, 'Redimensionar la imagen a un ancho y alto específico'),
+(2, 'grayscale', 0.25, 'Convertir los canales de color a blanco y negro'),
+(3, 'rotate', 0.20, 'Rotar la imagen un ángulo específico en grados'),
+(4, 'blur', 0.40, 'Aplicar desenfoque gaussiano a la imagen'),
+(5, 'crop', 0.30, 'Recortar una región específica de la imagen'),
+(6, 'watermark', 0.60, 'Añadir texto o logo superpuesto a la imagen')
+ON CONFLICT (name) DO NOTHING;
+
+-- Ajustar secuencias si es necesario (PostgreSQL SERIAL)
+SELECT setval('node_status_id_seq', (SELECT MAX(id) FROM node_status));
+SELECT setval('batch_status_id_seq', (SELECT MAX(id) FROM batch_status));
+SELECT setval('image_status_id_seq', (SELECT MAX(id) FROM image_status));
+SELECT setval('log_levels_id_seq', (SELECT MAX(id) FROM log_levels));
+SELECT setval('transformation_types_id_seq', (SELECT MAX(id) FROM transformation_types));

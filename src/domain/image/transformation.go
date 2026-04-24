@@ -15,3 +15,11 @@ type ImageTransformation struct {
 	TypeID    int    `json:"type_id"`
 	Params    string `json:"params"`
 }
+
+// BatchTransformation define el pipeline de transformaciones para un lote.
+type BatchTransformation struct {
+	BatchUUID      string `json:"batch_uuid"`
+	TypeID         int    `json:"type_id"`
+	Params         string `json:"params"`
+	ExecutionOrder int    `json:"execution_order"`
+}

@@ -13,3 +13,11 @@ type ImageTransformationDTO struct {
 	TypeID    int    `db:"type_id"`
 	Params    string `db:"params"`
 }
+
+type BatchTransformationDTO struct {
+	ID             int    `db:"id"`
+	BatchUUID      string `db:"batch_uuid"`
+	TypeID         int    `db:"type_id"`
+	Params         string `db:"params"`
+	ExecutionOrder int    `db:"execution_order"`
+}

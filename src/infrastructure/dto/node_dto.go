@@ -6,7 +6,10 @@ import "time"
 const (
 	NodeStatusActive   = 1
 	NodeStatusInactive = 2
-	NodeStatusError    = 3
+	NodeStatusIdle     = 3
+	NodeStatusBusy     = 4
+	NodeStatusStealing = 5
+	NodeStatusError    = 6
 )
 
 type NodeDTO struct {

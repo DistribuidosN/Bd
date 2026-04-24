@@ -10,5 +10,5 @@ import (
 // sobre el dominio de métricas. Es el contrato de entrada (driving).
 type MetricServicePort interface {
 	SaveMetrics(ctx context.Context, m *metrics.NodeMetrics) error
-	GetMetricsByNode(ctx context.Context, nodeID int) ([]metrics.NodeMetrics, error)
+	GetMetricsByNode(ctx context.Context, nodeID string) ([]metrics.NodeMetrics, error)
 }

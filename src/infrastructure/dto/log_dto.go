@@ -12,8 +12,8 @@ const (
 type LogDTO struct {
 	ID        int       `db:"id"`
 	NodeID    int       `db:"node_id"`
-	ImageUUID string    `db:"image_uuid"`
+	ImageUUID *string   `db:"image_uuid"`
 	LevelID   int       `db:"level_id"`
-	Message   string    `db:"message"`
-	LogTime   time.Time `db:"log_time"`
+	Message   string     `db:"message"`
+	LogTime   *time.Time `db:"log_time"`
 }

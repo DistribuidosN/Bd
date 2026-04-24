@@ -67,9 +67,9 @@ func (r *postgresNodeRepository) UpdateSignal(ctx context.Context, nodeID string
 func (r *postgresNodeRepository) ListAll(ctx context.Context) ([]node.Node, error) {
 	var dtos []dto.NodeDTO
 	if err := r.db.SelectContext(ctx, &dtos, `SELECT id, node_id, host, port, status_id, last_signal FROM nodes`); err != nil {
-		return nil, err
+		return make([]node.Node, 0), nil
 	}
-	result := make([]node.Node, 0, len(dtos))
+	result := make([]node.Node, 0)
 	for _, d := range dtos {
 		result = append(result, *toNodeModel(d))
 	}

@@ -150,22 +150,25 @@ src/
 |--------|------|-------------|
 | `GET` | `/health` | Health check del servicio |
 | **Imágenes** | | |
-| `POST` | `/api/v1/images` | Sube una imagen (form-data: `image` + `user_uuid`) |
+| `POST` | `/api/v1/images` | Sube imagen (Multipart) o Registra imagen (JSON) |
 | `GET` | `/api/v1/images/:id` | Consulta una imagen por UUID |
 | `PATCH` | `/api/v1/images/:id/status` | Actualiza estado de imagen |
+| `PATCH` | `/api/v1/images/:id/result` | **Flujo Crítico**: Sube resultado (Raw Bytes) a MinIO y actualiza ruta |
 | **Batches** | | |
+| `POST` | `/api/v1/batches/upload` | Sube múltiples imágenes (Multipart) o Registra Batch (JSON) |
 | `GET` | `/api/v1/batches/:id` | Consulta un batch por UUID |
+| `GET` | `/api/v1/batches/:id/images` | Obtiene batch y todas sus imágenes |
 | `PATCH` | `/api/v1/batches/:id/status` | Actualiza estado de batch |
 | **Nodos** | | |
 | `POST` | `/api/v1/nodes` | Registra un nodo worker |
-| `POST` | `/api/v1/nodes/:node_id/heartbeat` | Señal de vida del nodo |
+| `POST` | `/api/v1/nodes/:node_id/heartbeat` | Señal de vida del nodo (actualiza `last_signal`) |
 | `GET` | `/api/v1/nodes` | Lista todos los nodos registrados |
-| **Logs** | | |
-| `POST` | `/api/v1/logs` | Registra un log de procesamiento |
-| `GET` | `/api/v1/logs/:image_uuid` | Obtiene logs de una imagen |
 | **Métricas** | | |
 | `POST` | `/api/v1/metrics` | Registra métricas de un nodo |
-| `GET` | `/api/v1/metrics/:node_id` | Obtiene métricas de un nodo |
+| `GET` | `/api/v1/metrics/:node_id` | Obtiene métricas históricas de un nodo |
+| **Usuarios** | | |
+| `GET` | `/api/v1/users/:user_uuid/statistics` | Estadísticas (Batches totales, imágenes éxito/fallo) |
+| `GET` | `/api/v1/users/:user_uuid/activity` | Historial de actividad reciente del usuario |
 
 ---
 

@@ -19,6 +19,6 @@ func (s *MetricsService) SaveMetrics(ctx context.Context, m *metrics.NodeMetrics
 	return s.repo.Save(ctx, m)
 }
 
-func (s *MetricsService) GetMetricsByNode(ctx context.Context, nodeID int) ([]metrics.NodeMetrics, error) {
+func (s *MetricsService) GetMetricsByNode(ctx context.Context, nodeID string) ([]metrics.NodeMetrics, error) {
 	return s.repo.GetByNodeID(ctx, nodeID)
 }

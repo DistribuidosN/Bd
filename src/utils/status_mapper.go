@@ -7,7 +7,10 @@ var (
 	NodeStatuses = map[string]int{
 		"ACTIVE":   1,
 		"INACTIVE": 2,
-		"ERROR":    3,
+		"IDLE":     3,
+		"BUSY":     4,
+		"STEALING": 5,
+		"ERROR":    6,
 	}
 	BatchStatuses = map[string]int{
 		"PENDING":    1,
@@ -25,6 +28,13 @@ var (
 		"INFO":    1,
 		"WARNING": 2,
 		"ERROR":   3,
+		"FATAL":   4,
+	}
+	TransformationTypes = map[string]int{
+		"GRAYSCALE": 1,
+		"RESIZE":    2,
+		"BLUR":      3,
+		"CROP":      4,
 	}
 )
 

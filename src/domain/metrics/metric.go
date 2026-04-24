@@ -4,8 +4,8 @@ import "time"
 
 type NodeMetrics struct {
 	ID             int64     `json:"id"`
-	NodeID         int       `json:"node_id"`
-	ImageUUID      string    `json:"image_uuid"`
+	NodeID         string    `json:"node_id"`
+	ImageUUID      *string   `json:"image_uuid,omitempty"`
 	RamUsedMB      float64   `json:"ram_used_mb"`
 	RamTotalMB     float64   `json:"ram_total_mb"`
 	CpuPercent     float64   `json:"cpu_percent"`

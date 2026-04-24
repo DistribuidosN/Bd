@@ -48,7 +48,7 @@ func main() {
 	storageRepo := repository.NewMinioStorageRepository(clients.Minio, cfg.Minio.Bucket)
 
 	imgSvc := service.NewImageService(imgRepo, storageRepo, batchRepo)
-	batchSvc := service.NewBatchService(batchRepo)
+	batchSvc := service.NewBatchService(batchRepo, storageRepo)
 	logSvc := service.NewLogService(logRepo)
 	metricSvc := service.NewMetricsService(metricRepo)
 	nodeSvc := service.NewNodeService(nodeRepo)

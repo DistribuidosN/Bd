@@ -25,6 +25,7 @@ type ImageDTO struct {
 	ResultPath     *string    `db:"result_path"`
 	StatusID       int        `db:"status_id"`
 	NodeID         *int       `db:"node_id"`
+	NodeName       *string    `db:"node_name"`
 	ReceptionTime  time.Time  `db:"reception_time"`
 	ConversionTime *time.Time `db:"conversion_time"`
 }
