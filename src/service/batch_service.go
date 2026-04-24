@@ -11,11 +11,12 @@ import (
 
 type BatchService struct {
 	repo        driven.BatchRepository
+	imgRepo     driven.ImageRepository
 	storageRepo driven.StorageRepository
 }
 
-func NewBatchService(r driven.BatchRepository, storage driven.StorageRepository) *BatchService {
-	return &BatchService{repo: r, storageRepo: storage}
+func NewBatchService(r driven.BatchRepository, ir driven.ImageRepository, storage driven.StorageRepository) *BatchService {
+	return &BatchService{repo: r, imgRepo: ir, storageRepo: storage}
 }
 
 func (s *BatchService) GetBatch(ctx context.Context, uuid string) (*image.Batch, error) {
@@ -71,4 +72,16 @@ func (s *BatchService) ListUserBatches(ctx context.Context, userUUID string) ([]
 		})
 	}
 	return result, nil
+}
+func (s *BatchService) GetProgress(ctx context.Context, batchUUID string) (*driving.PaginatedImagesProgress, error) {
+	p, err := s.imgRepo.GetBatchProgress(ctx, batchUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &driving.PaginatedImagesProgress{
+		BatchUUID:          p.BatchUUID,
+		TotalImages:        p.TotalImages,
+		ProcessedImages:    p.ProcessedImages,
+		ProgressPercentage: p.ProgressPercentage,
+	}, nil
 }

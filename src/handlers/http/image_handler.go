@@ -74,7 +74,7 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
 		return
 	}
-	c.JSON(http.StatusOK, img)
+	c.PureJSON(http.StatusOK, img)
 }
 
 func (h *ImageHandler) UpdateStatus(c *gin.Context) {
@@ -204,7 +204,7 @@ func (h *ImageHandler) GetUserStatistics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, stats)
+	c.PureJSON(http.StatusOK, stats)
 }
 
 func (h *ImageHandler) GetUserActivity(c *gin.Context) {
@@ -213,7 +213,7 @@ func (h *ImageHandler) GetUserActivity(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, activity)
+	c.PureJSON(http.StatusOK, activity)
 }
 
 func (h *ImageHandler) GetBatchImages(c *gin.Context) {
@@ -233,7 +233,7 @@ func (h *ImageHandler) GetBatchImages(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.PureJSON(http.StatusOK, result)
 }
 
 func (h *ImageHandler) DownloadImage(c *gin.Context) {

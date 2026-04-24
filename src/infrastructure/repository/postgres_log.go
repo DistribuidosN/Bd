@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 
 	"enfok_bd/src/domain/logs"
@@ -68,5 +69,6 @@ func (r *postgresLogRepository) GetByImageID(ctx context.Context, uuid string) (
 			LogTime:   d.LogTime,
 		})
 	}
+	log.Printf("[DEBUG GO] Datos extraídos de BD para Logs de Imagen %s: Total=%d, Datos=%+v\n", uuid, len(result), result)
 	return result, nil
 }

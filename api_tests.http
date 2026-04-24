@@ -1,0 +1,167 @@
+### Variables
+@baseUrl = http://localhost:10021
+@user_uuid = 99faa897-1522-4dbd-ac6f-c983e55e026c
+@batch_uuid = 141acd12-01f7-4221-9d96-eb180462ce99
+@image_uuid = 5fe06462-c7d9-437a-99b1-d55e78282929
+@node_id = node-1
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### --- IMAGES ---
+
+### 2. Register Image (JSON)
+POST {{baseUrl}}/api/v1/images
+Content-Type: application/json
+
+{
+    "user_uuid": "{{user_uuid}}",
+    "batch_uuid": "{{batch_uuid}}",
+    "image_uuid": "{{image_uuid}}",
+    "file_name": "test_image.jpg"
+}
+
+### 3. Get Image Info (Using PureJSON for clean URLs)
+GET {{baseUrl}}/api/v1/images/{{image_uuid}}
+
+### 4. Download Image
+GET {{baseUrl}}/api/v1/images/{{image_uuid}}/download
+
+### 5. Update Image Status
+PATCH {{baseUrl}}/api/v1/images/{{image_uuid}}/status
+Content-Type: application/json
+
+{
+    "status": "PROCESSED"
+}
+
+### 6. Update Image Result (Worker simulation)
+PATCH {{baseUrl}}/api/v1/images/{{image_uuid}}/result
+X-Node-Id: {{node_id}}
+Content-Type: application/octet-stream
+
+<dummy_image_data_binary>
+
+### --- BATCHES ---
+
+### 7. Register Batch (JSON)
+POST {{baseUrl}}/api/v1/batches/upload
+Content-Type: application/json
+
+{
+    "user_uuid": "{{user_uuid}}",
+    "batch_uuid": "{{batch_uuid}}"
+}
+
+### 8. List User Batches
+GET {{baseUrl}}/api/v1/batches?user_uuid={{user_uuid}}
+
+### 9. Get Batch Info
+GET {{baseUrl}}/api/v1/batches/{{batch_uuid}}
+
+### 10. Get Batch Images (Paginated with PureJSON)
+GET {{baseUrl}}/api/v1/batches/{{batch_uuid}}/images?page=1&limit=10
+
+### 11. Update Batch Status
+PATCH {{baseUrl}}/api/v1/batches/{{batch_uuid}}/status
+Content-Type: application/json
+
+{
+    "status": "COMPLETED"
+}
+
+### 12. Save Batch Transformations
+POST {{baseUrl}}/api/v1/batches/{{batch_uuid}}/transformations
+Content-Type: application/json
+
+[
+    {
+        "name": "grayscale",
+        "params": "{}",
+        "execution_order": 1
+    },
+    {
+        "name": "resize",
+        "params": "{\"width\": 800, \"height\": 600}",
+        "execution_order": 2
+    }
+]
+
+### --- NODES ---
+
+### 13. Register Node
+POST {{baseUrl}}/api/v1/nodes
+Content-Type: application/json
+
+{
+    "id": "{{node_id}}",
+    "name": "Worker Node 1",
+    "ip": "127.0.0.1",
+    "port": 50051,
+    "status": "IDLE"
+}
+
+### 14. List Nodes
+GET {{baseUrl}}/api/v1/nodes
+
+### 15. Get Node
+GET {{baseUrl}}/api/v1/nodes/{{node_id}}
+
+### 16. Node Heartbeat
+POST {{baseUrl}}/api/v1/nodes/{{node_id}}/heartbeat
+
+### 17. Update Node Status
+PATCH {{baseUrl}}/api/v1/nodes/{{node_id}}/status
+Content-Type: application/json
+
+{
+    "status": "BUSY"
+}
+
+### --- LOGS & METRICS ---
+
+### 18. Create Log
+POST {{baseUrl}}/api/v1/logs
+Content-Type: application/json
+
+{
+    "node_id": "{{node_id}}",
+    "image_uuid": "{{image_uuid}}",
+    "level_name": "INFO",
+    "message": "Starting image transformation",
+    "log_time": "2026-04-24T07:40:00Z"
+}
+
+### 19. Get Logs by Image
+GET {{baseUrl}}/api/v1/logs/{{image_uuid}}
+
+### 20. Create Metrics
+POST {{baseUrl}}/api/v1/metrics
+Content-Type: application/json
+
+{
+    "node_id": "{{node_id}}",
+    "image_uuid": "{{image_uuid}}",
+    "ram_used_mb": 512.5,
+    "ram_total_mb": 2048,
+    "cpu_percent": 15.5,
+    "workers_busy": 1,
+    "workers_total": 4,
+    "queue_size": 0,
+    "tasks_done": 10,
+    "status": "HEALTHY"
+}
+
+### 21. Get Metrics by Node
+GET {{baseUrl}}/api/v1/metrics/{{node_id}}
+
+### 22. Get Metrics by Image (New Traceability Endpoint)
+GET {{baseUrl}}/api/v1/metrics/image/{{image_uuid}}
+
+### --- USER TELEMETRY ---
+
+### 23. User Statistics
+GET {{baseUrl}}/api/v1/users/{{user_uuid}}/statistics
+
+### 24. User Activity Timeline (Events history)
+GET {{baseUrl}}/api/v1/users/{{user_uuid}}/activity

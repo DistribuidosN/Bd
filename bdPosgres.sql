@@ -157,7 +157,7 @@ COMMENT ON COLUMN processing_logs.level_id IS 'FK a log_levels';
 -- ==========================================================
 
 CREATE TABLE node_metrics (
-    id BIGSERIAL PRIMARY KEY,
+    id int PRIMARY KEY,
     node_id INT NOT NULL,
     image_uuid CHAR(36),
     ram_used_mb DECIMAL(10,2) NOT NULL,

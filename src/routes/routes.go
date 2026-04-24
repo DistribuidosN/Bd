@@ -39,6 +39,7 @@ func Setup(router *gin.Engine, h *Handlers) {
 		api.GET("/batches/:id/images", h.Image.GetBatchImages)
 		api.PATCH("/batches/:id/status", h.Batch.UpdateStatus)
 		api.POST("/batches/:id/transformations", h.Batch.SaveTransformations)
+		api.GET("/batches/:id/progress", h.Batch.GetProgress)
 
 		// Nodos
 		api.POST("/nodes", h.Node.Register)
@@ -54,6 +55,7 @@ func Setup(router *gin.Engine, h *Handlers) {
 		// Métricas
 		api.POST("/metrics", h.Metrics.CreateMetrics)
 		api.GET("/metrics/:node_id", h.Metrics.GetMetricsByNode)
+		api.GET("/metrics/image/:image_uuid", h.Metrics.GetMetricsByImage)
 
 		// Usuarios (en ImageHandler por simplicidad de dependencias)
 		api.GET("/users/:user_uuid/statistics", h.Image.GetUserStatistics)

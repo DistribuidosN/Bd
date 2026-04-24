@@ -34,7 +34,7 @@ func (h *BatchHandler) ListBatches(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, batches)
+	c.PureJSON(http.StatusOK, batches)
 }
 
 func (h *BatchHandler) GetBatch(c *gin.Context) {
@@ -43,7 +43,7 @@ func (h *BatchHandler) GetBatch(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Batch not found"})
 		return
 	}
-	c.JSON(http.StatusOK, b)
+	c.PureJSON(http.StatusOK, b)
 }
 
 // GetBatchWithImages devuelve el batch y todas sus imágenes en un solo response.
@@ -53,7 +53,7 @@ func (h *BatchHandler) GetBatchWithImages(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Batch not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"batch":  batch,
 		"images": images,
 		"total":  len(images),
@@ -134,4 +134,14 @@ func (h *BatchHandler) SaveTransformations(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Transformations registered successfully"})
+}
+
+func (h *BatchHandler) GetProgress(c *gin.Context) {
+	batchUUID := c.Param("id")
+	progress, err := h.svc.GetProgress(c.Request.Context(), batchUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.PureJSON(http.StatusOK, progress)
 }

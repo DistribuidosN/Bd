@@ -22,3 +22,7 @@ func (s *MetricsService) SaveMetrics(ctx context.Context, m *metrics.NodeMetrics
 func (s *MetricsService) GetMetricsByNode(ctx context.Context, nodeID string) ([]metrics.NodeMetrics, error) {
 	return s.repo.GetByNodeID(ctx, nodeID)
 }
+
+func (s *MetricsService) GetMetricsByImage(ctx context.Context, imageUUID string) ([]metrics.NodeMetrics, error) {
+	return s.repo.GetByImageUUID(ctx, imageUUID)
+}

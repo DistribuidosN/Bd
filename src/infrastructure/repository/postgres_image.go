@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"enfok_bd/src/domain/image"
 	"enfok_bd/src/domain/ports/driven"
@@ -74,28 +75,58 @@ func (r *postgresImageRepository) UpdateStatus(ctx context.Context, uuid string,
 }
 
 func (r *postgresImageRepository) UpdateResult(ctx context.Context, uuid string, resultPath string, nodeID string) error {
-	var internalID int
-	err := r.db.GetContext(ctx, &internalID, "SELECT id FROM nodes WHERE node_id = $1", nodeID)
+	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Buscar ID interno del nodo
+	var internalNodeID int
+	if err := tx.GetContext(ctx, &internalNodeID, "SELECT id FROM nodes WHERE node_id = $1", nodeID); err != nil {
 		return fmt.Errorf("node %s not registered", nodeID)
 	}
 
-	query := `UPDATE images SET result_path = $1, status_id = 3, node_id = $2, conversion_time = CURRENT_TIMESTAMP WHERE image_uuid = $3`
-	_, err = r.db.ExecContext(ctx, query, resultPath, internalID, uuid)
-	return err
+	// 2. Actualizar imagen
+	queryImg := `UPDATE images SET result_path = $1, node_id = $2, status_id = 3, conversion_time = CURRENT_TIMESTAMP WHERE image_uuid = $3`
+	if _, err := tx.ExecContext(ctx, queryImg, resultPath, internalNodeID, uuid); err != nil {
+		return err
+	}
+
+	// 3. Obtener el batch_uuid de la imagen
+	var batchUUID string
+	if err := tx.GetContext(ctx, &batchUUID, "SELECT batch_uuid FROM images WHERE image_uuid = $1", uuid); err != nil {
+		return err
+	}
+
+	// [IMPORTANTE]: Confirmamos la transacción aquí para que GetBatchProgress vea el cambio
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// 4. Llamar a tu método de progreso
+	progress, err := r.GetBatchProgress(ctx, batchUUID)
+	if err == nil && progress.ProgressPercentage == 100 {
+		// 5. Si está al 100%, actualizamos el estado del batch
+		_, _ = r.db.ExecContext(ctx, "UPDATE batches SET status_id = 3 WHERE batch_uuid = $1", batchUUID)
+	}
+
+	return nil
 }
+
 
 func (r *postgresImageRepository) GetUserStatistics(ctx context.Context, userUUID string) (*driven.UserStatistics, error) {
 	var stats driven.UserStatistics
+	stats.TopTransformations = make([]driven.TransformationStat, 0)
 
-	// Total Batches con COALESCE para seguridad
+	// Total Batches
 	err := r.db.GetContext(ctx, &stats.TotalBatches, `SELECT COALESCE(COUNT(*), 0) FROM batches WHERE user_uuid = $1`, userUUID)
 	if err != nil {
-		return &driven.UserStatistics{}, nil // Devolvemos ceros en lugar de error 500
+		return &driven.UserStatistics{TopTransformations: make([]driven.TransformationStat, 0)}, nil
 	}
 
-	// Total Images, Success, Failed con COALESCE
-	query := `
+	// Total Images, Success, Failed
+	queryCounts := `
 		SELECT 
 			COALESCE(COUNT(*), 0) as total_images,
 			COALESCE(COUNT(CASE WHEN status_id = 3 THEN 1 END), 0) as images_success,
@@ -109,38 +140,69 @@ func (r *postgresImageRepository) GetUserStatistics(ctx context.Context, userUUI
 		ImagesSuccess int `db:"images_success"`
 		ImagesFailed  int `db:"images_failed"`
 	}
-	err = r.db.GetContext(ctx, &counts, query, userUUID)
-	if err != nil {
-		return &stats, nil // Devolvemos lo que tengamos (probablemente ceros)
+	err = r.db.GetContext(ctx, &counts, queryCounts, userUUID)
+	if err == nil {
+		stats.TotalImages = counts.TotalImages
+		stats.ImagesSuccess = counts.ImagesSuccess
+		stats.ImagesFailed = counts.ImagesFailed
 	}
 
-	stats.TotalImages = counts.TotalImages
-	stats.ImagesSuccess = counts.ImagesSuccess
-	stats.ImagesFailed = counts.ImagesFailed
+	// Top Transformations
+	queryTop := `
+		SELECT tt.name, COUNT(*)::int as count
+		FROM batch_transformations bt
+		JOIN batches b ON bt.batch_uuid = b.batch_uuid
+		JOIN transformation_types tt ON bt.type_id = tt.id
+		WHERE b.user_uuid = $1
+		GROUP BY tt.name
+		ORDER BY count DESC
+		LIMIT 5
+	`
+	err = r.db.SelectContext(ctx, &stats.TopTransformations, queryTop, userUUID)
+	if err != nil {
+		stats.TopTransformations = make([]driven.TransformationStat, 0)
+	}
 
+	log.Printf("[DEBUG GO] Datos extraídos de BD para Estadísticas de User %s: %+v\n", userUUID, stats)
 	return &stats, nil
 }
 
 func (r *postgresImageRepository) GetUserActivity(ctx context.Context, userUUID string) ([]driven.UserActivity, error) {
-	// Inicializamos con make para que en JSON sea [] y no null
 	activities := make([]driven.UserActivity, 0)
 	
 	query := `
-		SELECT 'BATCH_CREATED' as event_type, batch_uuid as ref_uuid, COALESCE(request_time, CURRENT_TIMESTAMP) as occurred_at
-		FROM batches
-		WHERE user_uuid = $1
+		-- Eventos de Creación de Lotes
+		SELECT 
+			'BATCH_CREATED' as event_type,
+			b.batch_uuid as ref_uuid,
+			'' as parent_uuid,
+			'Lote creado con ' || (SELECT COUNT(*) FROM images WHERE batch_uuid = b.batch_uuid) || ' imágenes' as description,
+			b.request_time as occurred_at
+		FROM batches b
+		WHERE b.user_uuid = $1
+
 		UNION ALL
-		SELECT 'IMAGE_PROCESSED' as event_type, i.image_uuid as ref_uuid, COALESCE(i.conversion_time, CURRENT_TIMESTAMP) as occurred_at
+
+		-- Eventos de Imágenes Procesadas
+		SELECT 
+			'IMAGE_PROCESSED' as event_type,
+			i.image_uuid as ref_uuid,
+			i.batch_uuid as parent_uuid,
+			'Imagen [' || i.original_name || '] procesada exitosamente por nodo ' || n.node_id as description,
+			i.conversion_time as occurred_at
 		FROM images i
 		JOIN batches b ON i.batch_uuid = b.batch_uuid
+		JOIN nodes n ON i.node_id = n.id
 		WHERE b.user_uuid = $1 AND i.conversion_time IS NOT NULL
+
 		ORDER BY occurred_at DESC
-		LIMIT 20
+		LIMIT 50
 	`
 	err := r.db.SelectContext(ctx, &activities, query, userUUID)
 	if err != nil {
-		return make([]driven.UserActivity, 0), nil // Siempre devolvemos lista vacía, nunca error 500
+		return make([]driven.UserActivity, 0), nil
 	}
+	log.Printf("[DEBUG GO] Datos extraídos de BD para Actividad de User %s: Total=%d, Datos=%+v\n", userUUID, len(activities), activities)
 	return activities, nil
 }
 
@@ -184,4 +246,33 @@ func (r *postgresImageRepository) ListByBatchPaginated(ctx context.Context, batc
 		})
 	}
 	return images, total, nil
+}
+func (r *postgresImageRepository) GetBatchProgress(ctx context.Context, batchUUID string) (*driven.BatchProgress, error) {
+	var stats struct {
+		Total     int `db:"total"`
+		Processed int `db:"processed"`
+	}
+
+	query := `
+		SELECT 
+			COUNT(*)::int as total,
+			COUNT(CASE WHEN status_id IN (3, 4) THEN 1 END)::int as processed
+		FROM images 
+		WHERE batch_uuid = $1
+	`
+	if err := r.db.GetContext(ctx, &stats, query, batchUUID); err != nil {
+		return nil, err
+	}
+
+	percentage := 0.0
+	if stats.Total > 0 {
+		percentage = (float64(stats.Processed) / float64(stats.Total)) * 100
+	}
+
+	return &driven.BatchProgress{
+		BatchUUID:          batchUUID,
+		TotalImages:        stats.Total,
+		ProcessedImages:    stats.Processed,
+		ProgressPercentage: percentage,
+	}, nil
 }

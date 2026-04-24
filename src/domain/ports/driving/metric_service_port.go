@@ -11,4 +11,5 @@ import (
 type MetricServicePort interface {
 	SaveMetrics(ctx context.Context, m *metrics.NodeMetrics) error
 	GetMetricsByNode(ctx context.Context, nodeID string) ([]metrics.NodeMetrics, error)
+	GetMetricsByImage(ctx context.Context, imageUUID string) ([]metrics.NodeMetrics, error)
 }

@@ -153,11 +153,21 @@ func (s *ImageService) GetUserStatistics(ctx context.Context, userUUID string) (
 	if err != nil {
 		return nil, err
 	}
+
+	topTrans := make([]driving.TransformationStat, 0, len(stats.TopTransformations))
+	for _, t := range stats.TopTransformations {
+		topTrans = append(topTrans, driving.TransformationStat{
+			Name:  t.Name,
+			Count: t.Count,
+		})
+	}
+
 	return &driving.UserStatistics{
-		TotalBatches:  stats.TotalBatches,
-		TotalImages:   stats.TotalImages,
-		ImagesSuccess: stats.ImagesSuccess,
-		ImagesFailed:  stats.ImagesFailed,
+		TotalBatches:       stats.TotalBatches,
+		TotalImages:        stats.TotalImages,
+		ImagesSuccess:      stats.ImagesSuccess,
+		ImagesFailed:       stats.ImagesFailed,
+		TopTransformations: topTrans,
 	}, nil
 }
 
@@ -169,9 +179,11 @@ func (s *ImageService) GetUserActivity(ctx context.Context, userUUID string) ([]
 	result := make([]driving.UserActivity, 0, len(activities))
 	for _, a := range activities {
 		result = append(result, driving.UserActivity{
-			EventType:  a.EventType,
-			RefUUID:    a.RefUUID,
-			OccurredAt: a.OccurredAt,
+			EventType:   a.EventType,
+			RefUUID:     a.RefUUID,
+			ParentUUID:  a.ParentUUID,
+			Description: a.Description,
+			OccurredAt:  a.OccurredAt,
 		})
 	}
 	return result, nil

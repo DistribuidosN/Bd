@@ -14,19 +14,35 @@ type ImageRepository interface {
 	GetUserStatistics(ctx context.Context, userUUID string) (*UserStatistics, error)
 	GetUserActivity(ctx context.Context, userUUID string) ([]UserActivity, error)
 	ListByBatchPaginated(ctx context.Context, batchUUID string, limit, offset int) ([]image.Image, int, error)
+	GetBatchProgress(ctx context.Context, batchUUID string) (*BatchProgress, error)
+}
+
+type BatchProgress struct {
+	BatchUUID          string  `json:"batch_uuid"`
+	TotalImages        int     `json:"total_images"`
+	ProcessedImages    int     `json:"processed_images"`
+	ProgressPercentage float64 `json:"progress_percentage"`
+}
+
+type TransformationStat struct {
+	Name  string `json:"name" db:"name"`
+	Count int    `json:"count" db:"count"`
 }
 
 type UserStatistics struct {
-	TotalBatches  int
-	TotalImages   int
-	ImagesSuccess int
-	ImagesFailed  int
+	TotalBatches       int                  `json:"total_batches"`
+	TotalImages        int                  `json:"total_images"`
+	ImagesSuccess      int                  `json:"images_success"`
+	ImagesFailed       int                  `json:"images_failed"`
+	TopTransformations []TransformationStat `json:"top_transformations"`
 }
 
 type UserActivity struct {
-	EventType  string
-	RefUUID    string
-	OccurredAt time.Time
+	EventType   string    `json:"event_type" db:"event_type"`
+	RefUUID     string    `json:"ref_uuid" db:"ref_uuid"`
+	ParentUUID  string    `json:"parent_uuid,omitempty" db:"parent_uuid"`
+	Description string    `json:"description" db:"description"`
+	OccurredAt  time.Time `json:"occurred_at" db:"occurred_at"`
 }
 
 type BatchWithCover struct {

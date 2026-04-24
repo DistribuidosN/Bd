@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"enfok_bd/src/domain/metrics"
 	"enfok_bd/src/domain/ports/driven"
@@ -106,5 +107,50 @@ func (r *postgresMetricRepository) GetByNodeID(ctx context.Context, nodeName str
 			ReportedAt:      d.ReportedAt,
 		})
 	}
+	log.Printf("[DEBUG GO] Datos extraídos de BD para Métricas del Nodo %s: Total=%d, Datos=%+v\n", nodeName, len(result), result)
+	return result, nil
+}
+func (r *postgresMetricRepository) GetByImageUUID(ctx context.Context, imageUUID string) ([]metrics.NodeMetrics, error) {
+	result := make([]metrics.NodeMetrics, 0)
+
+	var dtos []dto.MetricDTO
+	query := `SELECT m.id, n.node_id as node_name, m.image_uuid, m.ram_used_mb, m.ram_total_mb, m.cpu_percent, 
+	          m.workers_busy, m.workers_total, m.queue_size, m.queue_capacity, m.tasks_done, 
+	          m.steals_performed, m.avg_latency_ms, m.p95_latency_ms, m.uptime_seconds, 
+	          m.status_id, COALESCE(m.reported_at, CURRENT_TIMESTAMP) as reported_at 
+	          FROM node_metrics m
+	          JOIN nodes n ON m.node_id = n.id
+	          WHERE m.image_uuid = $1 ORDER BY m.reported_at DESC`
+
+	if err := r.db.SelectContext(ctx, &dtos, query, imageUUID); err != nil {
+		return make([]metrics.NodeMetrics, 0), nil
+	}
+
+	for _, d := range dtos {
+		nodeName := ""
+		if d.NodeName != nil {
+			nodeName = *d.NodeName
+		}
+		result = append(result, metrics.NodeMetrics{
+			ID:              d.ID,
+			NodeID:          nodeName,
+			ImageUUID:       d.ImageUUID,
+			RamUsedMB:       d.RamUsedMB,
+			RamTotalMB:      d.RamTotalMB,
+			CpuPercent:      d.CpuPercent,
+			WorkersBusy:     d.WorkersBusy,
+			WorkersTotal:    d.WorkersTotal,
+			QueueSize:       d.QueueSize,
+			QueueCapacity:   d.QueueCapacity,
+			TasksDone:       d.TasksDone,
+			StealsPerformed: d.StealsPerformed,
+			AvgLatencyMS:    d.AvgLatencyMS,
+			P95LatencyMS:    d.P95LatencyMS,
+			UptimeSeconds:   d.UptimeSeconds,
+			Status:          utils.GetStatusFromID(utils.NodeStatuses, d.StatusID),
+			ReportedAt:      d.ReportedAt,
+		})
+	}
+	log.Printf("[DEBUG GO] Datos extraídos de BD para Métricas de Imagen %s: Total=%d, Datos=%+v\n", imageUUID, len(result), result)
 	return result, nil
 }

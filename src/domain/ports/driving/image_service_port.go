@@ -37,17 +37,25 @@ type PaginatedImages struct {
 	HasMore     bool          `json:"has_more" json:"hasMore"`
 }
 
+type TransformationStat struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
 type UserStatistics struct {
-	TotalBatches  int `json:"total_batches"`
-	TotalImages   int `json:"total_images"`
-	ImagesSuccess int `json:"images_success"`
-	ImagesFailed  int `json:"images_failed"`
+	TotalBatches       int                  `json:"total_batches"`
+	TotalImages        int                  `json:"total_images"`
+	ImagesSuccess      int                  `json:"images_success"`
+	ImagesFailed       int                  `json:"images_failed"`
+	TopTransformations []TransformationStat `json:"top_transformations"`
 }
 
 type UserActivity struct {
-	EventType  string    `json:"event_type"`
-	RefUUID    string    `json:"ref_uuid"`
-	OccurredAt time.Time `json:"occurred_at"`
+	EventType   string    `json:"event_type"`
+	RefUUID     string    `json:"ref_uuid"`
+	ParentUUID  string    `json:"parent_uuid,omitempty"`
+	Description string    `json:"description"`
+	OccurredAt  time.Time `json:"occurred_at"`
 }
 
 type BatchWithCover struct {
@@ -64,4 +72,12 @@ type BatchServicePort interface {
 	GetBatchWithImages(ctx context.Context, uuid string) (*image.Batch, []image.Image, error)
 	SaveTransformations(ctx context.Context, batchUUID string, transformations []image.BatchTransformation) error
 	ListUserBatches(ctx context.Context, userUUID string) ([]BatchWithCover, error)
+	GetProgress(ctx context.Context, batchUUID string) (*PaginatedImagesProgress, error)
+}
+
+type PaginatedImagesProgress struct {
+	BatchUUID          string  `json:"batch_uuid"`
+	TotalImages        int     `json:"total_images"`
+	ProcessedImages    int     `json:"processed_images"`
+	ProgressPercentage float64 `json:"progress_percentage"`
 }

@@ -7,6 +7,7 @@ import "time"
 type MetricDTO struct {
 	ID              int64    `db:"id"`
 	NodeID          int      `db:"node_id"`
+	NodeName        *string  `db:"node_name"`
 	ImageUUID       *string  `db:"image_uuid"`
 	RamUsedMB       float64  `db:"ram_used_mb"`
 	RamTotalMB      float64  `db:"ram_total_mb"`
