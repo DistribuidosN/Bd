@@ -145,3 +145,22 @@ func (h *BatchHandler) GetProgress(c *gin.Context) {
 	}
 	c.PureJSON(http.StatusOK, progress)
 }
+
+func (h *BatchHandler) CreateZip(c *gin.Context) {
+	// Normally it's /internal/create-zip/:id or in the body. Using body:
+	var body struct {
+		BatchID string `json:"batch_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	downloadUrl, err := h.svc.CreateZip(c.Request.Context(), body.BatchID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.PureJSON(http.StatusOK, gin.H{"download_url": downloadUrl})
+}

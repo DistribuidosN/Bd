@@ -1,7 +1,10 @@
 package service
 
 import (
+	"archive/zip"
 	"context"
+	"fmt"
+	"io"
 	"time"
 
 	"enfok_bd/src/domain/image"
@@ -84,4 +87,54 @@ func (s *BatchService) GetProgress(ctx context.Context, batchUUID string) (*driv
 		ProcessedImages:    p.ProcessedImages,
 		ProgressPercentage: p.ProgressPercentage,
 	}, nil
+}
+
+func (s *BatchService) CreateZip(ctx context.Context, batchUUID string) (string, error) {
+	images, err := s.repo.GetImagesByBatch(ctx, batchUUID)
+	if err != nil {
+		return "", err
+	}
+
+	if len(images) == 0 {
+		return "", fmt.Errorf("no images found for batch %s", batchUUID)
+	}
+
+	pr, pw := io.Pipe()
+
+	go func() {
+		zw := zip.NewWriter(pw)
+		defer pw.Close()
+
+		for _, img := range images {
+			if img.ResultPath == nil || *img.ResultPath == "" {
+				continue // Skip failed or unprocessed images
+			}
+			
+			// Download image from main bucket
+			content, err := s.storageRepo.Download(context.Background(), *img.ResultPath)
+			if err != nil {
+				continue // Skip if error
+			}
+
+			// Add to zip
+			f, err := zw.Create(*img.ResultPath)
+			if err != nil {
+				continue
+			}
+			_, _ = f.Write(content)
+		}
+
+		_ = zw.Close()
+	}()
+
+	zipName := fmt.Sprintf("batch_%s.zip", batchUUID)
+	
+	// Upload stream to exports bucket
+	err = s.storageRepo.UploadStream(ctx, "exports", zipName, pr, -1, "application/zip")
+	if err != nil {
+		return "", err
+	}
+
+	// Generate presigned URL
+	return s.storageRepo.GetExportPresignedURL(ctx, zipName, time.Hour*12)
 }

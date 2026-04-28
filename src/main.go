@@ -45,7 +45,7 @@ func main() {
 	nodeRepo := repository.NewPostgresNodeRepository(clients.DB)
 	logRepo := repository.NewPostgresLogRepository(clients.DB)
 	metricRepo := repository.NewPostgresMetricRepository(clients.DB)
-	storageRepo := repository.NewMinioStorageRepository(clients.Minio, cfg.Minio.Bucket)
+	storageRepo := repository.NewMinioStorageRepository(clients.MinioInternal, clients.MinioExternal, cfg.Minio.Bucket)
 
 	imgSvc := service.NewImageService(imgRepo, storageRepo, batchRepo)
 	batchSvc := service.NewBatchService(batchRepo, imgRepo, storageRepo)
@@ -60,6 +60,23 @@ func main() {
 		Log:     http_handlers.NewLogHandler(logSvc),
 		Metrics: http_handlers.NewMetricsHandler(metricSvc),
 	}
+
+	// 5.1 Start background tasks
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				logger.Info("Running cleanup for old exports...")
+				if err := storageRepo.DeleteOldExports(context.Background(), 24*time.Hour); err != nil {
+					logger.Error("Error cleaning up old exports", "error", err)
+				}
+			}
+		}
+	}()
 
 	// 6. Setup Router & Routes
 	router := gin.Default()

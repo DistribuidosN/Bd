@@ -73,6 +73,7 @@ type BatchServicePort interface {
 	SaveTransformations(ctx context.Context, batchUUID string, transformations []image.BatchTransformation) error
 	ListUserBatches(ctx context.Context, userUUID string) ([]BatchWithCover, error)
 	GetProgress(ctx context.Context, batchUUID string) (*PaginatedImagesProgress, error)
+	CreateZip(ctx context.Context, batchUUID string) (string, error)
 }
 
 type PaginatedImagesProgress struct {

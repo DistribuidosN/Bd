@@ -14,8 +14,9 @@ import (
 )
 
 type Clients struct {
-	DB    *sqlx.DB
-	Minio *minio.Client
+	DB            *sqlx.DB
+	MinioInternal *minio.Client
+	MinioExternal *minio.Client
 }
 
 // Connect abre la conexión a Postgres y MinIO, configurando los pools.
@@ -53,30 +54,55 @@ func Connect(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Cli
 		"database", cfg.Database.DBName,
 	)
 
-	// 2. Initialize MinIO
-	minioClient, err := minio.New(cfg.Minio.URL, &minio.Options{
+	// 2. Initialize MinIO Internal (localhost:9999 para operaciones locales)
+	internalClient, err := minio.New(cfg.Minio.URL, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.Minio.User, cfg.Minio.Password, ""),
 		Secure: cfg.Minio.SSL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to create minio client: %w", err)
+		return nil, fmt.Errorf("unable to create internal minio client: %w", err)
 	}
 
 	// Ensure bucket exists
-	exists, err := minioClient.BucketExists(ctx, cfg.Minio.Bucket)
+	exists, err := internalClient.BucketExists(ctx, cfg.Minio.Bucket)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check bucket: %w", err)
 	}
 	if !exists {
-		if err := minioClient.MakeBucket(ctx, cfg.Minio.Bucket, minio.MakeBucketOptions{}); err != nil {
+		if err := internalClient.MakeBucket(ctx, cfg.Minio.Bucket, minio.MakeBucketOptions{}); err != nil {
 			return nil, fmt.Errorf("unable to create bucket: %w", err)
 		}
 		logger.Info("Bucket creado", "bucket", cfg.Minio.Bucket)
 	}
-	logger.Info("conexión a MinIO establecida", "url", cfg.Minio.URL)
+
+	// Ensure exports bucket exists
+	exportsBucket := "exports"
+	exportsExists, err := internalClient.BucketExists(ctx, exportsBucket)
+	if err != nil {
+		return nil, fmt.Errorf("unable to check exports bucket: %w", err)
+	}
+	if !exportsExists {
+		if err := internalClient.MakeBucket(ctx, exportsBucket, minio.MakeBucketOptions{}); err != nil {
+			return nil, fmt.Errorf("unable to create exports bucket: %w", err)
+		}
+		logger.Info("Bucket de exportaciones creado", "bucket", exportsBucket)
+	}
+
+	logger.Info("conexión a MinIO Interna establecida", "url", cfg.Minio.URL)
+
+	// 3. Initialize MinIO External (ngrok para firmas públicas)
+	ngrokURL := "913d-181-55-22-220.ngrok-free.app"
+	externalClient, err := minio.New(ngrokURL, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.Minio.User, cfg.Minio.Password, ""),
+		Secure: true, // ngrok usa https
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to create external minio client: %w", err)
+	}
 
 	return &Clients{
-		DB:    db,
-		Minio: minioClient,
+		DB:            db,
+		MinioInternal: internalClient,
+		MinioExternal: externalClient,
 	}, nil
 }

@@ -61,5 +61,10 @@ func Setup(router *gin.Engine, h *Handlers) {
 		api.GET("/users/:user_uuid/statistics", h.Image.GetUserStatistics)
 		api.GET("/users/:user_uuid/activity", h.Image.GetUserActivity)
 	}
+
+	internal := router.Group("/internal")
+	{
+		internal.POST("/create-zip", h.Batch.CreateZip)
+	}
 }
 
