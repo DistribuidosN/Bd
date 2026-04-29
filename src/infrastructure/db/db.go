@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"enfok_bd/src/infrastructure/config"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/minio/minio-go/v7"
@@ -90,11 +91,11 @@ func Connect(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Cli
 
 	logger.Info("conexión a MinIO Interna establecida", "url", cfg.Minio.URL)
 
-	// 3. Initialize MinIO External (ngrok para firmas públicas)
-	ngrokURL := "913d-181-55-22-220.ngrok-free.app"
+	// 3. Initialize MinIO External (Nginx reverse proxy para firmas públicas)
+	ngrokURL := "192.168.80.22"
 	externalClient, err := minio.New(ngrokURL, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.Minio.User, cfg.Minio.Password, ""),
-		Secure: true, // ngrok usa https
+		Secure: false, // Comunicación interna HTTP a través de Nginx
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create external minio client: %w", err)

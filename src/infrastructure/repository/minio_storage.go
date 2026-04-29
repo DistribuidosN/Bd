@@ -63,9 +63,13 @@ func (r *minioStorageRepository) Download(ctx context.Context, fileName string) 
 }
 
 func (r *minioStorageRepository) UploadStream(ctx context.Context, bucketName string, fileName string, reader io.Reader, size int64, contentType string) error {
-	_, err := r.internalClient.PutObject(ctx, bucketName, fileName, reader, size, minio.PutObjectOptions{
+	opts := minio.PutObjectOptions{
 		ContentType: contentType,
-	})
+	}
+	if size == -1 {
+		opts.PartSize = 10 * 1024 * 1024 // 10MB
+	}
+	_, err := r.internalClient.PutObject(ctx, bucketName, fileName, reader, size, opts)
 	if err != nil {
 		return fmt.Errorf("failed to upload stream to minio bucket %s: %w", bucketName, err)
 	}

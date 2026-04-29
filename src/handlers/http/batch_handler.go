@@ -158,6 +158,7 @@ func (h *BatchHandler) CreateZip(c *gin.Context) {
 	
 	downloadUrl, err := h.svc.CreateZip(c.Request.Context(), body.BatchID)
 	if err != nil {
+		fmt.Printf("[ERROR] CreateZip failed for batch %s: %v\n", body.BatchID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
