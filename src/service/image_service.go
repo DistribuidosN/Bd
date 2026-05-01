@@ -199,7 +199,7 @@ func (s *ImageService) GetBatchImagesPaginated(ctx context.Context, batchUUID st
 	// Generar URLs para cada imagen
 	for i := range images {
 		if images[i].ResultPath != nil && *images[i].ResultPath != "" {
-			url, err := s.storageRepo.GetPresignedURL(ctx, *images[i].ResultPath, time.Hour)
+			url, err := s.storageRepo.GetPresignedURL(ctx, *images[i].ResultPath)
 			if err == nil {
 				images[i].ResultPath = &url
 			}

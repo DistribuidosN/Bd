@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
-
 	"enfok_bd/src/domain/image"
 	"enfok_bd/src/domain/ports/driven"
 	"enfok_bd/src/domain/ports/driving"
@@ -57,7 +55,7 @@ func (s *BatchService) ListUserBatches(ctx context.Context, userUUID string) ([]
 	for _, b := range batches {
 		coverURL := ""
 		if b.CoverResultPath != nil && *b.CoverResultPath != "" {
-			url, err := s.storageRepo.GetPresignedURL(ctx, *b.CoverResultPath, time.Hour)
+			url, err := s.storageRepo.GetPresignedURL(ctx, *b.CoverResultPath)
 			if err == nil {
 				coverURL = url
 			}
@@ -136,5 +134,5 @@ func (s *BatchService) CreateZip(ctx context.Context, batchUUID string) (string,
 	}
 
 	// Generate presigned URL
-	return s.storageRepo.GetExportPresignedURL(ctx, zipName, time.Hour*12)
+	return s.storageRepo.GetExportPresignedURL(ctx, zipName)
 }

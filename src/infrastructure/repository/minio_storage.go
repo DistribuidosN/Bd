@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"time"
 
 	"enfok_bd/src/domain/ports/driven"
+	"enfok_bd/src/utils"
 
 	"github.com/minio/minio-go/v7"
 )
@@ -38,18 +38,12 @@ func (r *minioStorageRepository) Upload(ctx context.Context, fileName string, co
 }
 
 func (r *minioStorageRepository) GetURL(ctx context.Context, fileName string) (string, error) {
-	// Mantenemos GetURL con 24h para compatibilidad actual, pero GetPresignedURL usará 12h forzadas.
-	return r.GetPresignedURL(ctx, fileName, time.Hour*24)
+	return r.GetPresignedURL(ctx, fileName)
 }
 
-func (r *minioStorageRepository) GetPresignedURL(ctx context.Context, fileName string, duration time.Duration) (string, error) {
-	reqParams := make(url.Values)
-	// Forzamos 12 horas y generamos la firma usando EXCLUSIVAMENTE el cliente externo (ngrok)
-	presignedURL, err := r.externalClient.PresignedGetObject(ctx, r.bucket, fileName, time.Hour*12, reqParams)
-	if err != nil {
-		return "", fmt.Errorf("failed to get presigned url: %w", err)
-	}
-	return presignedURL.String(), nil
+func (r *minioStorageRepository) GetPresignedURL(ctx context.Context, fileName string) (string, error) {
+	ip := utils.GetLocalIP()
+	return fmt.Sprintf("http://%s/%s/%s", ip, r.bucket, fileName), nil
 }
 
 func (r *minioStorageRepository) Download(ctx context.Context, fileName string) ([]byte, error) {
@@ -76,16 +70,9 @@ func (r *minioStorageRepository) UploadStream(ctx context.Context, bucketName st
 	return nil
 }
 
-func (r *minioStorageRepository) GetExportPresignedURL(ctx context.Context, fileName string, duration time.Duration) (string, error) {
-	reqParams := make(url.Values)
-	// Inyectar header para forzar descarga
-	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
-	
-	presignedURL, err := r.externalClient.PresignedGetObject(ctx, "exports", fileName, duration, reqParams)
-	if err != nil {
-		return "", fmt.Errorf("failed to get export presigned url: %w", err)
-	}
-	return presignedURL.String(), nil
+func (r *minioStorageRepository) GetExportPresignedURL(ctx context.Context, fileName string) (string, error) {
+	ip := utils.GetLocalIP()
+	return fmt.Sprintf("http://%s/exports/%s", ip, fileName), nil
 }
 
 func (r *minioStorageRepository) DeleteOldExports(ctx context.Context, duration time.Duration) error {
